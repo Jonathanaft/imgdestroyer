@@ -2,82 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>STICKMAN VS DIGITAL MONSTER 2.0</title>
+<title>STICKMAN SURVIVAL</title>
 <style>
 body {
     margin: 0;
     padding: 0;
     overflow: hidden;
     background: black;
-    color: white;
     font-family: monospace;
+    color: white;
 }
-
-#mainCanvas, #stickmanCanvas {
+#gameCanvas, #stickmanCanvas {
     position: absolute;
     top: 0;
     left: 0;
 }
-
-.controls {
+#controls {
+    display:none;
+}
+#timer {
     position: absolute;
     top: 10px;
-    left: 10px;
-    z-index: 3;
-    background: rgba(150,0,0,0.8);
-    padding: 10px;
-    border: 2px solid red;
-    color: white;
-}
-
-.controls * {
-    margin: 2px;
-}
-
-.corruptText {
-    position: absolute;
-    top: 50px;
-    left: 50px;
-    font-size: 36px;
-    font-weight: bold;
-    z-index: 3;
-    white-space: pre;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    z-index: 10;
+    color: lime;
 }
 </style>
 </head>
 <body>
 
-<div class="controls">
-    <input type="file" id="upload" accept="image/*"><br>
-    <label>Severity:</label><input type="range" id="severity" min="1" max="100" value="40"><br>
-    <label><input type="checkbox" id="chaos"> TOTAL CHAOS</label><br>
-    <button onclick="startChaos()">DESTROY & FIGHT</button>
-    <button onclick="resetGame()">RESET</button>
-</div>
-
-<div class="corruptText" id="corruptText">STICKMAN VS DIGITAL MONSTER</div>
-
-<canvas id="mainCanvas"></canvas>
+<div id="timer">Time: 180</div>
+<canvas id="gameCanvas"></canvas>
 <canvas id="stickmanCanvas" width="20" height="40"></canvas>
 
+<input type="file" id="upload" accept="image/*">
+
 <script>
-const mainCanvas = document.getElementById("mainCanvas");
-const ctx = mainCanvas.getContext("2d");
-mainCanvas.width = window.innerWidth;
-mainCanvas.height = window.innerHeight;
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const stickmanCanvas = document.getElementById("stickmanCanvas");
-const stickCtx = stickmanCanvas.getContext("2d");
+const stickCanvas = document.getElementById("stickmanCanvas");
+const stickCtx = stickCanvas.getContext("2d");
 
-const corruptText = document.getElementById("corruptText");
-
+const timerEl = document.getElementById("timer");
 let img = new Image();
 let imgData = null;
 let fragments = [];
-let stickX = 50;
-let stickY = window.innerHeight - 50;
-let stickSpeed = 4;
-let chaosInterval = null;
+let attacks = [];
+
+let stick = {x:50, y:canvas.height-60, w:20, h:40, speed:5};
+let keys = {};
+let gameStarted = false;
+let surviveTime = 180; // seconds
 
 document.getElementById("upload").addEventListener("change", e=>{
     const reader = new FileReader();
@@ -93,34 +73,29 @@ img.onload = ()=>{
     tempCtx.drawImage(img,0,0);
     imgData = tempCtx.getImageData(0,0,img.width,img.height);
     createFragments();
+    startGame();
 };
 
-// --- Fragment creation ---
+// --- Fragment monster ---
 function createFragments(){
     fragments = [];
     const fragSize = 30;
     for(let y=0;y<img.height;y+=fragSize){
         for(let x=0;x<img.width;x+=fragSize){
-            const fragment = {
-                x: x + (window.innerWidth-img.width)/2,
-                y: y + 100,
-                w: fragSize,
-                h: fragSize,
-                dx:0,
-                dy:0,
-                imgX: x,
-                imgY: y,
-                targetX: Math.random()*window.innerWidth,
-                targetY: Math.random()*window.innerHeight/2 // monster above screen
-            };
-            fragments.push(fragment);
+            fragments.push({
+                x: (canvas.width-img.width)/2 + x,
+                y: 50 + y,
+                w: fragSize, h: fragSize,
+                targetX: Math.random()*canvas.width,
+                targetY: Math.random()*canvas.height/3
+            });
         }
     }
 }
 
 // --- Stickman ---
 function drawStickman(){
-    stickCtx.clearRect(0,0,stickmanCanvas.width,stickmanCanvas.height);
+    stickCtx.clearRect(0,0,stickCanvas.width,stickCanvas.height);
     stickCtx.strokeStyle = "yellow";
     stickCtx.lineWidth = 2;
     stickCtx.beginPath();
@@ -128,83 +103,97 @@ function drawStickman(){
     stickCtx.beginPath(); stickCtx.moveTo(10,10); stickCtx.lineTo(10,25); stickCtx.stroke();
     stickCtx.beginPath(); stickCtx.moveTo(10,15); stickCtx.lineTo(0,20); stickCtx.moveTo(10,15); stickCtx.lineTo(20,20); stickCtx.stroke();
     stickCtx.beginPath(); stickCtx.moveTo(10,25); stickCtx.lineTo(0,35); stickCtx.moveTo(10,25); stickCtx.lineTo(20,35); stickCtx.stroke();
-    stickmanCanvas.style.left = stickX + "px";
-    stickmanCanvas.style.top = stickY + "px";
+    stickCanvas.style.left = stick.x + "px";
+    stickCanvas.style.top = stick.y + "px";
 }
 
-// --- Chaos & Game Loop ---
-function startChaos(){
-    if(chaosInterval) clearInterval(chaosInterval);
-    chaosInterval = setInterval(gameLoop, 50);
+// --- Controls ---
+window.addEventListener("keydown", e=>{keys[e.key]=true;});
+window.addEventListener("keyup", e=>{keys[e.key]=false;});
+
+// --- Game ---
+function startGame(){
+    if(gameStarted) return;
+    gameStarted = true;
+    surviveTime = 180;
+    setInterval(()=>{surviveTime--; timerEl.textContent="Time: "+surviveTime; if(surviveTime<=0) alert("YOU SURVIVED!");},1000);
+    requestAnimationFrame(gameLoop);
 }
 
-function resetGame(){
-    if(chaosInterval) clearInterval(chaosInterval);
-    chaosInterval=null;
-    ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
-    stickX = 50;
-    stickY = window.innerHeight - 50;
-    drawStickman();
-    corruptText.textContent = "STICKMAN VS DIGITAL MONSTER";
+// --- Attack spawn ---
+function spawnAttack(){
+    if(fragments.length===0) return;
+    const frag = fragments[Math.floor(Math.random()*fragments.length)];
+    attacks.push({
+        x: frag.x, y: frag.y,
+        w: frag.w, h: frag.h,
+        dx: (stick.x-frag.x)/100,
+        dy: (stick.y-frag.y)/100
+    });
 }
+
+// --- Collision ---
+function checkCollision(a,b){return a.x<a.x+b.w && a.x+ a.w> b.x && a.y<a.y+b.h && a.y+a.h> b.y;}
 
 // --- Game Loop ---
 function gameLoop(){
-    // move fragments smoothly toward target
-    ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // animate monster fragments
     fragments.forEach(f=>{
-        f.x += (f.targetX - f.x) * 0.02;
-        f.y += (f.targetY - f.y) * 0.02;
-        if(imgData){
-            ctx.putImageData(getFragment(imgData,f.imgX,f.imgY,f.w,f.h),f.x,f.y);
-        }
-        // collision with stickman
-        if(stickX< f.x+f.w && stickX+20>f.x && stickY< f.y+f.h && stickY+40>f.y){
-            stickX -= stickSpeed;
-            stickY -= stickSpeed;
-        }
+        f.x += (f.targetX-f.x)*0.02;
+        f.y += (f.targetY-f.y)*0.02;
+        if(imgData) ctx.putImageData(getFragment(imgData,f.imgX||0,f.imgY||0,f.w,f.h),f.x,f.y);
     });
 
-    // stickman moves randomly
-    stickX += (Math.random()-0.5)*stickSpeed;
-    stickY += (Math.random()-0.5)*stickSpeed;
-    stickX = Math.max(0,Math.min(window.innerWidth-20,stickX));
-    stickY = Math.max(0,Math.min(window.innerHeight-40,stickY));
+    // spawn attacks randomly
+    if(Math.random()<0.05) spawnAttack();
 
+    // move attacks
+    attacks.forEach((a,i)=>{
+        a.x+=a.dx*5; a.y+=a.dy*5;
+        ctx.fillStyle="red"; ctx.fillRect(a.x,a.y,a.w,a.h);
+        if(checkCollision(a,stick)){
+            alert("YOU WERE DESTROYED!"); resetGame(); return;
+        }
+        // remove attacks if offscreen
+        if(a.x<0||a.x>canvas.width||a.y<0||a.y>canvas.height) attacks.splice(i,1);
+    });
+
+    // stickman movement
+    if(keys["ArrowUp"]||keys["w"]) stick.y -= stick.speed;
+    if(keys["ArrowDown"]||keys["s"]) stick.y += stick.speed;
+    if(keys["ArrowLeft"]||keys["a"]) stick.x -= stick.speed;
+    if(keys["ArrowRight"]||keys["d"]) stick.x += stick.speed;
+    stick.x = Math.max(0,Math.min(canvas.width-20,stick.x));
+    stick.y = Math.max(0,Math.min(canvas.height-40,stick.y));
     drawStickman();
 
-    // corrupt text
-    corruptText.textContent = randomCorruptText("STICKMAN VS DIGITAL MONSTER");
-    corruptText.style.left = Math.random()*(window.innerWidth-400) + "px";
-    corruptText.style.top = Math.random()*(window.innerHeight-50) + "px";
-    corruptText.style.color = `rgb(${Math.random()*255},${Math.random()*255},${Math.random()*255})`;
+    requestAnimationFrame(gameLoop);
 }
 
-function randomCorruptText(str){
-    return str.split("").map(c=>{
-        if(Math.random()<0.3) return String.fromCharCode(33+Math.floor(Math.random()*94));
-        return c;
-    }).join("");
+function resetGame(){
+    gameStarted=false;
+    fragments=[]; attacks=[]; stick.x=50; stick.y=canvas.height-60;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawStickman();
 }
-
 function getFragment(imgData,x,y,w,h){
     const temp = new ImageData(w,h);
     for(let j=0;j<h;j++){
         for(let i=0;i<w;i++){
-            const idx = (j*w+i)*4;
-            const srcIdx = ((y+j)*imgData.width + (x+i))*4;
-            temp.data[idx] = imgData.data[srcIdx];
-            temp.data[idx+1] = imgData.data[srcIdx+1];
-            temp.data[idx+2] = imgData.data[srcIdx+2];
-            temp.data[idx+3] = 255;
+            const idx=(j*w+i)*4;
+            const srcIdx=((y+j)*imgData.width + (x+i))*4;
+            temp.data[idx]=imgData.data[srcIdx];
+            temp.data[idx+1]=imgData.data[srcIdx+1];
+            temp.data[idx+2]=imgData.data[srcIdx+2];
+            temp.data[idx+3]=255;
         }
     }
     return temp;
 }
 
-// initialize stickman
+// initialize
 drawStickman();
 </script>
-
 </body>
 </html>
