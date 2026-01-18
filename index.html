@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IMAGE ANNIHILATOR</title>
+
+<style>
+    body {
+        background: #400;
+        color: #ffcccc;
+        font-family: monospace;
+        text-align: center;
+        overflow-x: hidden;
+    }
+
+    h2 {
+        text-shadow: 0 0 10px red;
+    }
+
+    canvas {
+        border: 2px solid red;
+        margin-top: 10px;
+        max-width: 90%;
+        box-shadow: 0 0 20px red;
+    }
+
+    .controls {
+        margin: 15px;
+        background: #600;
+        padding: 10px;
+        border: 2px solid red;
+        box-shadow: 0 0 15px darkred;
+    }
+
+    input, select, button, label {
+        background: #800;
+        color: #fff;
+        border: 1px solid red;
+        padding: 6px;
+        margin: 4px;
+    }
+
+    button:hover {
+        background: red;
+        cursor: pointer;
+    }
+
+    .shake {
+        animation: shake 0.15s infinite;
+    }
+
+    @keyframes shake {
+        0% { transform: translate(2px, 1px) rotate(0deg); }
+        25% { transform: translate(-2px, -1px) rotate(-1deg); }
+        50% { transform: translate(2px, -1px) rotate(1deg); }
+        75% { transform: translate(-2px, 1px) rotate(0deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+</style>
+</head>
+
+<body>
+
+<h2>⚠️ IMAGE ANNIHILATOR ⚠️</h2>
+
+<input type="file" id="upload" accept="image/*"><br>
+
+<div class="controls">
+    <label>Severity:</label>
+    <input type="range" id="severity" min="1" max="100" value="40">
+    <br>
+
+    <label>Mode:</label>
+    <select id="mode">
+        <option value="pixel">Pixel Scramble</option>
+        <option value="glitch">Glitch Slices</option>
+        <option value="stretch">Stretch & Smear</option>
+        <option value="color">Color Chaos</option>
+        <option value="blocks">Block Corruption</option>
+    </select>
+    <br>
+
+    <label>
+        <input type="checkbox" id="chaos">
+        ☣️ TOTAL CHAOS MODE (UNSAFE)
+    </label>
+    <br>
+
+    <button onclick="applyEffect()">DESTROY</button>
+    <button onclick="resetImage()">RESET</button>
+    <button onclick="downloadImage()">DOWNLOAD</button>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const img = new Image();
+let originalImageData = null;
+
+document.getElementById("upload").addEventListener("change", e => {
+    const reader = new FileReader();
+    reader.onload = () => img.src = reader.result;
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+};
+
+function resetImage() {
+    if (!originalImageData) return;
+    ctx.putImageData(originalImageData, 0, 0);
+    document.body.classList.remove("shake");
+}
+
+function applyEffect() {
+    let severity = +document.getElementById("severity").value;
+    const chaos = document.getElementById("chaos").checked;
+    const mode = document.getElementById("mode").value;
+
+    if (chaos) {
+        severity *= 6; // beyond reasonable limits
+        document.body.classList.add("shake");
+
+        for (let i = 0; i < 3; i++) {
+            pixelScramble(severity);
+            glitchSlices(severity);
+            stretchSmear(severity);
+            colorChaos(severity);
+            blockCorrupt(severity);
+        }
+        return;
+    }
+
+    document.body.classList.remove("shake");
+
+    if (mode === "pixel") pixelScramble(severity);
+    if (mode === "glitch") glitchSlices(severity);
+    if (mode === "stretch") stretchSmear(severity);
+    if (mode === "color") colorChaos(severity);
+    if (mode === "blocks") blockCorrupt(severity);
+}
+
+function downloadImage() {
+    const link = document.createElement("a");
+    link.download = "annihilated.png";
+    link.href = canvas.toDataURL();
+    link.click();
+}
+
+function pixelScramble(amount) {
+    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let d = imgData.data;
+
+    for (let i = 0; i < d.length; i += 4) {
+        if (Math.random() * 100 < amount) {
+            let j = (Math.random() * d.length) & ~3;
+            d[i] = d[j];
+            d[i+1] = d[j+1];
+            d[i+2] = d[j+2];
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+}
+
+function glitchSlices(amount) {
+    for (let i = 0; i < amount; i++) {
+        let y = Math.random() * canvas.height;
+        let h = Math.random() * 30 + 1;
+        let offset = (Math.random() - 0.5) * amount * 10;
+        ctx.drawImage(canvas, 0, y, canvas.width, h, offset, y, canvas.width, h);
+    }
+}
+
+function stretchSmear(amount) {
+    for (let i = 0; i < amount; i++) {
+        let x = Math.random() * canvas.width;
+        let y = Math.random() * canvas.height;
+        let w = Math.random() * 80 + 1;
+        let h = Math.random() * 80 + 1;
+        ctx.drawImage(canvas, x, y, w, h, x, y, w * (Math.random() * 4), h);
+    }
+}
+
+function colorChaos(amount) {
+    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+        if (Math.random() * 100 < amount) {
+            d[i] ^= Math.random() * 255;
+            d[i+1] ^= Math.random() * 255;
+            d[i+2] ^= Math.random() * 255;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+}
+
+function blockCorrupt(amount) {
+    for (let i = 0; i < amount; i++) {
+        let size = Math.random() * 60 + 10;
+        let x = Math.random() * canvas.width;
+        let y = Math.random() * canvas.height;
+        let block = ctx.getImageData(x, y, size, size);
+        ctx.putImageData(block,
+            x + (Math.random() - 0.5) * amount * 3,
+            y + (Math.random() - 0.5) * amount * 3
+        );
+    }
+}
+</script>
+
+</body>
+</html>
