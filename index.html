@@ -2,66 +2,83 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>IMAGE ANNIHILATOR</title>
-
+<title>IMAGE ANNIHILATOR: CHAOS EDITION 2.0</title>
 <style>
-    body {
-        background: #400;
-        color: #ffcccc;
-        font-family: monospace;
-        text-align: center;
-        overflow-x: hidden;
-    }
+body {
+    background: radial-gradient(circle at center, #400 0%, #200 100%);
+    color: #ff9999;
+    font-family: monospace;
+    text-align: center;
+    overflow-x: hidden;
+    animation: bgpulse 3s infinite alternate;
+}
 
-    h2 {
-        text-shadow: 0 0 10px red;
-    }
+h2 {
+    text-shadow: 0 0 5px #f00, 0 0 10px #ff0, 0 0 20px #f0f;
+    animation: flicker 0.2s infinite alternate;
+}
 
-    canvas {
-        border: 2px solid red;
-        margin-top: 10px;
-        max-width: 90%;
-        box-shadow: 0 0 20px red;
-    }
+canvas {
+    border: 3px solid red;
+    margin-top: 10px;
+    max-width: 90%;
+    box-shadow: 0 0 20px darkred, 0 0 40px #ff4444;
+}
 
-    .controls {
-        margin: 15px;
-        background: #600;
-        padding: 10px;
-        border: 2px solid red;
-        box-shadow: 0 0 15px darkred;
-    }
+.controls {
+    margin: 15px;
+    background: linear-gradient(45deg, #600, #800);
+    padding: 15px;
+    border: 2px solid red;
+    box-shadow: 0 0 25px #f00;
+    animation: borderpulse 2s infinite alternate;
+}
 
-    input, select, button, label {
-        background: #800;
-        color: #fff;
-        border: 1px solid red;
-        padding: 6px;
-        margin: 4px;
-    }
+input, select, button, label {
+    background: #900;
+    color: #fff;
+    border: 1px solid #f00;
+    padding: 6px;
+    margin: 4px;
+}
 
-    button:hover {
-        background: red;
-        cursor: pointer;
-    }
+button:hover {
+    background: #f00;
+    cursor: pointer;
+}
 
-    .shake {
-        animation: shake 0.15s infinite;
-    }
+.shake {
+    animation: shake 0.15s infinite;
+}
 
-    @keyframes shake {
-        0% { transform: translate(2px, 1px) rotate(0deg); }
-        25% { transform: translate(-2px, -1px) rotate(-1deg); }
-        50% { transform: translate(2px, -1px) rotate(1deg); }
-        75% { transform: translate(-2px, 1px) rotate(0deg); }
-        100% { transform: translate(1px, -2px) rotate(-1deg); }
-    }
+@keyframes shake {
+    0% { transform: translate(2px, 1px) rotate(0deg); }
+    25% { transform: translate(-2px, -1px) rotate(-1deg); }
+    50% { transform: translate(2px, -1px) rotate(1deg); }
+    75% { transform: translate(-2px, 1px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+@keyframes flicker {
+    0% { text-shadow: 0 0 5px #f00; }
+    50% { text-shadow: 0 0 15px #ff0; }
+    100% { text-shadow: 0 0 25px #f0f; }
+}
+
+@keyframes bgpulse {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
+@keyframes borderpulse {
+    0% { box-shadow: 0 0 25px #f00; }
+    100% { box-shadow: 0 0 50px #ff4444; }
+}
 </style>
 </head>
-
 <body>
 
-<h2>⚠️ IMAGE ANNIHILATOR ⚠️</h2>
+<h2>⚠️ IMAGE ANNIHILATOR 2.0 ⚠️</h2>
 
 <input type="file" id="upload" accept="image/*"><br>
 
@@ -82,7 +99,7 @@
 
     <label>
         <input type="checkbox" id="chaos">
-        ☣️ TOTAL CHAOS MODE (UNSAFE)
+        ☣️ TOTAL CHAOS MODE
     </label>
     <br>
 
@@ -98,6 +115,7 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const img = new Image();
 let originalImageData = null;
+let chaosInterval = null;
 
 document.getElementById("upload").addEventListener("change", e => {
     const reader = new FileReader();
@@ -116,6 +134,10 @@ function resetImage() {
     if (!originalImageData) return;
     ctx.putImageData(originalImageData, 0, 0);
     document.body.classList.remove("shake");
+    if (chaosInterval) {
+        clearInterval(chaosInterval);
+        chaosInterval = null;
+    }
 }
 
 function applyEffect() {
@@ -124,26 +146,28 @@ function applyEffect() {
     const mode = document.getElementById("mode").value;
 
     if (chaos) {
-        severity *= 6; // beyond reasonable limits
         document.body.classList.add("shake");
+        if (chaosInterval) clearInterval(chaosInterval);
+        chaosInterval = setInterval(() => {
+            let chaosSeverity = severity * 5;
 
-        for (let i = 0; i < 3; i++) {
-            pixelScramble(severity);
-            glitchSlices(severity);
-            stretchSmear(severity);
-            colorChaos(severity);
-            blockCorrupt(severity);
-        }
+            pixelScramble(chaosSeverity);
+            glitchSlices(chaosSeverity);
+            stretchSmear(chaosSeverity);
+            colorChaos(chaosSeverity);
+            blockCorrupt(chaosSeverity);
+            blurSmear(chaosSeverity / 3);
+            noiseLayer(chaosSeverity / 2);
+        }, 150);
         return;
+    } else {
+        document.body.classList.remove("shake");
+        if (mode === "pixel") pixelScramble(severity);
+        if (mode === "glitch") glitchSlices(severity);
+        if (mode === "stretch") stretchSmear(severity);
+        if (mode === "color") colorChaos(severity);
+        if (mode === "blocks") blockCorrupt(severity);
     }
-
-    document.body.classList.remove("shake");
-
-    if (mode === "pixel") pixelScramble(severity);
-    if (mode === "glitch") glitchSlices(severity);
-    if (mode === "stretch") stretchSmear(severity);
-    if (mode === "color") colorChaos(severity);
-    if (mode === "blocks") blockCorrupt(severity);
 }
 
 function downloadImage() {
@@ -153,64 +177,93 @@ function downloadImage() {
     link.click();
 }
 
+// --- Distortion Methods ---
 function pixelScramble(amount) {
-    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
     let d = imgData.data;
-
-    for (let i = 0; i < d.length; i += 4) {
-        if (Math.random() * 100 < amount) {
-            let j = (Math.random() * d.length) & ~3;
-            d[i] = d[j];
-            d[i+1] = d[j+1];
-            d[i+2] = d[j+2];
+    for (let i=0;i<d.length;i+=4){
+        if(Math.random()*100 < amount){
+            let j=(Math.random()*d.length)&~3;
+            d[i]=d[j]; d[i+1]=d[j+1]; d[i+2]=d[j+2];
         }
     }
-    ctx.putImageData(imgData, 0, 0);
+    ctx.putImageData(imgData,0,0);
 }
 
-function glitchSlices(amount) {
-    for (let i = 0; i < amount; i++) {
-        let y = Math.random() * canvas.height;
-        let h = Math.random() * 30 + 1;
-        let offset = (Math.random() - 0.5) * amount * 10;
-        ctx.drawImage(canvas, 0, y, canvas.width, h, offset, y, canvas.width, h);
+function glitchSlices(amount){
+    for(let i=0;i<amount;i++){
+        let y=Math.random()*canvas.height;
+        let h=Math.random()*30+1;
+        let offset=(Math.random()-0.5)*amount*10;
+        ctx.drawImage(canvas,0,y,canvas.width,h,offset,y,canvas.width,h);
     }
 }
 
-function stretchSmear(amount) {
-    for (let i = 0; i < amount; i++) {
-        let x = Math.random() * canvas.width;
-        let y = Math.random() * canvas.height;
-        let w = Math.random() * 80 + 1;
-        let h = Math.random() * 80 + 1;
-        ctx.drawImage(canvas, x, y, w, h, x, y, w * (Math.random() * 4), h);
+function stretchSmear(amount){
+    for(let i=0;i<amount;i++){
+        let x=Math.random()*canvas.width;
+        let y=Math.random()*canvas.height;
+        let w=Math.random()*80+1;
+        let h=Math.random()*80+1;
+        ctx.drawImage(canvas,x,y,w,h,x,y,w*(Math.random()*4),h);
     }
 }
 
-function colorChaos(amount) {
-    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-        if (Math.random() * 100 < amount) {
-            d[i] ^= Math.random() * 255;
-            d[i+1] ^= Math.random() * 255;
-            d[i+2] ^= Math.random() * 255;
+function colorChaos(amount){
+    let imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+    let d=imgData.data;
+    for(let i=0;i<d.length;i+=4){
+        if(Math.random()*100<amount){
+            d[i]^=Math.random()*255;
+            d[i+1]^=Math.random()*255;
+            d[i+2]^=Math.random()*255;
         }
     }
-    ctx.putImageData(imgData, 0, 0);
+    ctx.putImageData(imgData,0,0);
 }
 
-function blockCorrupt(amount) {
-    for (let i = 0; i < amount; i++) {
-        let size = Math.random() * 60 + 10;
-        let x = Math.random() * canvas.width;
-        let y = Math.random() * canvas.height;
-        let block = ctx.getImageData(x, y, size, size);
+function blockCorrupt(amount){
+    for(let i=0;i<amount;i++){
+        let size=Math.random()*60+10;
+        let x=Math.random()*canvas.width;
+        let y=Math.random()*canvas.height;
+        let block=ctx.getImageData(x,y,size,size);
         ctx.putImageData(block,
-            x + (Math.random() - 0.5) * amount * 3,
-            y + (Math.random() - 0.5) * amount * 3
+            x+(Math.random()-0.5)*amount*3,
+            y+(Math.random()-0.5)*amount*3
         );
     }
+}
+
+// --- Extra methods for partial recognizability ---
+function blurSmear(amount){
+    let imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    let d = imgData.data;
+    for(let y=1; y<canvas.height-1; y++){
+        for(let x=1; x<canvas.width-1; x++){
+            let idx = (y*canvas.width + x)*4;
+            for(let c=0;c<3;c++){
+                d[idx+c] = (
+                    d[idx+c] + d[idx+c-4] + d[idx+c+4] +
+                    d[idx+c-canvas.width*4] + d[idx+c+canvas.width*4]
+                )/5;
+            }
+        }
+    }
+    ctx.putImageData(imgData,0,0);
+}
+
+function noiseLayer(amount){
+    let imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    let d = imgData.data;
+    for(let i=0;i<d.length;i+=4){
+        if(Math.random()*100<amount){
+            d[i]+=Math.random()*50-25;
+            d[i+1]+=Math.random()*50-25;
+            d[i+2]+=Math.random()*50-25;
+        }
+    }
+    ctx.putImageData(imgData,0,0);
 }
 </script>
 
