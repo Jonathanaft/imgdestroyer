@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>STICKMAN VS DIGITAL MONSTER</title>
+<title>STICKMAN VS DIGITAL MONSTER 2.0</title>
 <style>
 body {
     margin: 0;
@@ -13,16 +13,10 @@ body {
     font-family: monospace;
 }
 
-#mainCanvas {
+#mainCanvas, #stickmanCanvas {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 0;
-}
-
-#stickmanCanvas {
-    position: absolute;
-    z-index: 2;
 }
 
 .controls {
@@ -104,20 +98,20 @@ img.onload = ()=>{
 // --- Fragment creation ---
 function createFragments(){
     fragments = [];
-    const w = img.width;
-    const h = img.height;
     const fragSize = 30;
-    for(let y=0;y<h;y+=fragSize){
-        for(let x=0;x<w;x+=fragSize){
+    for(let y=0;y<img.height;y+=fragSize){
+        for(let x=0;x<img.width;x+=fragSize){
             const fragment = {
-                x: Math.random()*window.innerWidth,
-                y: Math.random()*window.innerHeight,
+                x: x + (window.innerWidth-img.width)/2,
+                y: y + 100,
                 w: fragSize,
                 h: fragSize,
-                dx: (Math.random()-0.5)*3,
-                dy: (Math.random()-0.5)*3,
+                dx:0,
+                dy:0,
                 imgX: x,
-                imgY: y
+                imgY: y,
+                targetX: Math.random()*window.innerWidth,
+                targetY: Math.random()*window.innerHeight/2 // monster above screen
             };
             fragments.push(fragment);
         }
@@ -129,29 +123,11 @@ function drawStickman(){
     stickCtx.clearRect(0,0,stickmanCanvas.width,stickmanCanvas.height);
     stickCtx.strokeStyle = "yellow";
     stickCtx.lineWidth = 2;
-    // head
     stickCtx.beginPath();
-    stickCtx.arc(10,5,5,0,Math.PI*2);
-    stickCtx.stroke();
-    // body
-    stickCtx.beginPath();
-    stickCtx.moveTo(10,10);
-    stickCtx.lineTo(10,25);
-    stickCtx.stroke();
-    // arms
-    stickCtx.beginPath();
-    stickCtx.moveTo(10,15);
-    stickCtx.lineTo(0,20);
-    stickCtx.moveTo(10,15);
-    stickCtx.lineTo(20,20);
-    stickCtx.stroke();
-    // legs
-    stickCtx.beginPath();
-    stickCtx.moveTo(10,25);
-    stickCtx.lineTo(0,35);
-    stickCtx.moveTo(10,25);
-    stickCtx.lineTo(20,35);
-    stickCtx.stroke();
+    stickCtx.arc(10,5,5,0,Math.PI*2); stickCtx.stroke();
+    stickCtx.beginPath(); stickCtx.moveTo(10,10); stickCtx.lineTo(10,25); stickCtx.stroke();
+    stickCtx.beginPath(); stickCtx.moveTo(10,15); stickCtx.lineTo(0,20); stickCtx.moveTo(10,15); stickCtx.lineTo(20,20); stickCtx.stroke();
+    stickCtx.beginPath(); stickCtx.moveTo(10,25); stickCtx.lineTo(0,35); stickCtx.moveTo(10,25); stickCtx.lineTo(20,35); stickCtx.stroke();
     stickmanCanvas.style.left = stickX + "px";
     stickmanCanvas.style.top = stickY + "px";
 }
@@ -174,30 +150,22 @@ function resetGame(){
 
 // --- Game Loop ---
 function gameLoop(){
-    // move fragments
+    // move fragments smoothly toward target
     ctx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
     fragments.forEach(f=>{
-        f.x += f.dx;
-        f.y += f.dy;
-        // bounce
-        if(f.x<0||f.x+f.w>window.innerWidth) f.dx*=-1;
-        if(f.y<0||f.y+f.h>window.innerHeight) f.dy*=-1;
-        // draw fragment
+        f.x += (f.targetX - f.x) * 0.02;
+        f.y += (f.targetY - f.y) * 0.02;
         if(imgData){
-            ctx.putImageData(
-                getFragment(imgData,f.imgX,f.imgY,f.w,f.h),
-                f.x,f.y
-            );
+            ctx.putImageData(getFragment(imgData,f.imgX,f.imgY,f.w,f.h),f.x,f.y);
         }
         // collision with stickman
         if(stickX< f.x+f.w && stickX+20>f.x && stickY< f.y+f.h && stickY+40>f.y){
-            // bounce back
             stickX -= stickSpeed;
             stickY -= stickSpeed;
         }
     });
 
-    // move stickman randomly (simulate player escaping)
+    // stickman moves randomly
     stickX += (Math.random()-0.5)*stickSpeed;
     stickY += (Math.random()-0.5)*stickSpeed;
     stickX = Math.max(0,Math.min(window.innerWidth-20,stickX));
